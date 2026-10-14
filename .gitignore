@@ -1,0 +1,37 @@
+# 防止个人信息 / 临时文件被意外提交
+# 注意：含斜杠的模式是「相对仓库根」锚定的，所以对嵌套路径要写 **/ 前缀，
+#       否则 personal-archive/archive/... 这类路径不会被忽略。
+.DS_Store
+Thumbs.db
+*.log
+PUSH.md
+
+# ── 档案的私有内容（含个人信息的档案不应入库；本仓库只发布空模板）──
+**/archive/10-画像/*
+**/archive/20-日志/*
+**/archive/30-规范/*
+**/archive/40-决策/*
+!**/archive/*/.gitkeep
+**/archive/*.private.md
+
+# ── 本地隐私黑名单：必须留在本地，写进仓库等于公开泄漏 ──
+scripts/blacklist.local
+
+# ── 凭据 / 密钥 / 环境变量 ──
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+credentials.json
+service-account*.json
+.netrc
+
+# ── 安装器更新备份 ──
+**/.backups/
