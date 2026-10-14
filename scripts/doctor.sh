@@ -10,7 +10,7 @@
 # 退出码: 0=通过(可含警告)  1=发现错误  2=用法/路径错误
 #
 # 检查项:
-#   A 目录体例   00-总索引.md 与 10/20/30/40 板块目录是否齐备；有无临时/残留文件
+#   A 目录体例   00-总索引.md 与顶层 NN- 板块目录是否齐备、档位是否连续（板块动态识别）
 #   B frontmatter 是否闭合、必填字段（title/type/created/updated/tags/status）、枚举取值
 #   C 编号连续   同板块内 `NN-` 前缀是否连续无跳号（每 10 一档）
 #   D 正文禁令   是否出现机器绝对路径（错误）/ 模型或厂商字样（警告）
@@ -46,8 +46,19 @@ if [ ! -d "${ARCH}" ]; then
   exit 2
 fi
 
-SECTIONS="10-画像 20-日志 30-规范 40-决策"
-TYPE_ENUM="rule index profile log decision"
+# 板块动态识别：顶层 NN-xxx/ 目录（不写死清单 → 新增板块无需改脚本）
+SECTIONS=""
+while IFS= read -r d; do
+  [ -n "$d" ] && SECTIONS="${SECTIONS}$(basename "$d") "
+done < <(find "${ARCH}" -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9]-*' | sort)
+SECTIONS="${SECTIONS% }"
+SECTION_SEEDED=0
+if [ -z "${SECTIONS}" ]; then
+  SECTIONS="10-画像 20-日志 30-规范 40-决策"
+  SECTION_SEEDED=1
+fi
+
+TYPE_ENUM="rule index profile log decision economics finance"
 STATUS_ENUM="生效中 已作废 草稿"
 PROSE_BAN='模型|大模型|智能体厂商|ChatGPT|GPT-|DeepSeek|Claude|Gemini|Copilot|OpenAI|Anthropic'
 ABS_RE='[/]Users[/][A-Za-z0-9_.-]+|[/]home[/][A-Za-z0-9_.-]+|[Cc]:[\\/]Users[\\/]'
@@ -104,6 +115,25 @@ if [ -n "${STRAY}" ]; then
 else
   ok "无临时/残留文件"
 fi
+if [ "${SECTION_SEEDED}" -eq 1 ]; then
+  warn "未发现任何顶层 NN- 板块目录（档案尚未建立板块体例）"
+else
+  BADSEC=0; prevsec=""
+  for s in ${SECTIONS}; do
+    sn="${s%%-*}"
+    if [ -z "${prevsec}" ]; then
+      [ "${sn}" = "10" ] || { warn "首个板块档位是 ${sn}，标准体例从 10 起"; BADSEC=$((BADSEC+1)); }
+    else
+      want=$((10#${prevsec} + 10))
+      [ "$((10#${sn}))" -eq "${want}" ] || {
+        warn "板块档位跳档 → ${prevsec} 之后是 ${sn}（应为 $(printf '%02d' "${want}")）"
+        BADSEC=$((BADSEC+1))
+      }
+    fi
+    prevsec="${sn}"
+  done
+  [ "${BADSEC}" -eq 0 ] && ok "板块档位连续（$(echo "${SECTIONS}" | tr ' ' '/')）"
+fi
 echo ""
 
 # ---------- B. frontmatter ----------
@@ -118,16 +148,23 @@ if [ -n "${DOCS}" ]; then
       err "${rel}: frontmatter 未闭合或缺失（首行须为 --- 且成对出现）"; NFM=$((NFM+1)); continue
     fi
     miss=""
-    for k in title type created updated tags status; do
+    for k in title type created updated; do
       [ -z "$(fm_get "$f" "$k")" ] && miss="${miss}${k} "
     done
     if [ -n "${miss}" ]; then
       err "${rel}: 缺必填字段 → ${miss}"; NFM=$((NFM+1)); continue
     fi
+    for k in tags status; do
+      if [ -z "$(fm_get "$f" "$k")" ]; then
+        warn "${rel}: 建议补 ${k}（不是必填，但便于检索与判定时效）"
+      fi
+    done
     ty="$(fm_get "$f" type)"
-    case " ${TYPE_ENUM} " in *" ${ty} "*) : ;; *) warn "${rel}: type=${ty} 不在枚举内（${TYPE_ENUM}）";; esac
+    case " ${TYPE_ENUM} " in *" ${ty} "*) : ;; *) warn "${rel}: type=${ty} 不在常用枚举内（${TYPE_ENUM}）";; esac
     st="$(fm_get "$f" status)"
-    case " ${STATUS_ENUM} " in *" ${st} "*) : ;; *) warn "${rel}: status=${st} 不在枚举内（${STATUS_ENUM}）";; esac
+    if [ -n "${st}" ]; then
+      case " ${STATUS_ENUM} " in *" ${st} "*) : ;; *) warn "${rel}: status=${st} 不在枚举内（${STATUS_ENUM}）";; esac
+    fi
     cr="$(fm_get "$f" created)"; up="$(fm_get "$f" updated)"
     if [ -n "${up}" ] && [ -n "${cr}" ] && [ "${up}" \< "${cr}" ]; then
       warn "${rel}: updated(${up}) 早于 created(${cr})"
