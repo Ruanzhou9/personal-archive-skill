@@ -39,9 +39,12 @@ if ($LinkArchive -ne "") {
     Write-Host "X -LinkArchive 指向的目录不存在: $LinkArchive" -ForegroundColor Red
     exit 1
   }
-  if (-not (Test-Path (Join-Path $LinkArchive "00-总索引.md"))) {
-    Write-Host "X $LinkArchive 里没有 00-总索引.md —— 这看起来不是一个个人档案，拒绝链接。" -ForegroundColor Red
-    Write-Host "  正确的档案根目录应包含 00-总索引.md 与 10-画像\ 20-日志\ 30-规范\ 40-决策\"
+  # 档案根目录识别兼容新旧体例：总索引叫 总索引.md（现行）或 00-总索引.md（历史编号体例）
+  $IdxNew = Join-Path $LinkArchive "总索引.md"
+  $IdxOld = Join-Path $LinkArchive "00-总索引.md"
+  if (-not ((Test-Path $IdxNew) -or (Test-Path $IdxOld))) {
+    Write-Host "X $LinkArchive 里没有 总索引.md（或 00-总索引.md）—— 这看起来不是一个个人档案，拒绝链接。" -ForegroundColor Red
+    Write-Host "  正确的档案根目录应直接包含总索引与若干板块目录，如 画像\ 日志\ 规范\ 决策\"
     exit 1
   }
 }

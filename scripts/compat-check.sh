@@ -6,7 +6,7 @@
 #   · SKILL.md 首行 ---（frontmatter 可被 skill 加载器识别）、闭合、必填字段
 #   · name 与目录名一致、description 长度在 Agent Skills 规范内（≤1024）、声明 version
 #   · 无 BOM / LF 换行 / UTF-8 合法
-#   · archive/ 就位，且能解析到含 00-总索引.md 的档案目录
+#   · archive/ 就位，且能解析到含 总索引.md（或 00-总索引.md）的档案目录
 #   · 无同源变体（避免同一个 agent 重复加载两份协议）
 #
 # 用法: bash scripts/compat-check.sh          核对全部
@@ -118,17 +118,23 @@ for parent in "${CANDIDATES[@]}"; do
     ok "无 BOM"
   fi
   if grep -q $'\r' "$f" 2>/dev/null; then err "存在 CRLF（应为 LF）"; else ok "换行符 LF"; fi
-  if iconv -f UTF-8 -t UTF-8 "$f" >/dev/null 2>&1; then ok "UTF-8 编码合法"; else err "不是合法 UTF-8"; fi
+  # UTF-8 检测用 python 解码而非 iconv：iconv 在某些非 TTY 环境会对 /dev/null 报
+  # "Inappropriate ioctl for device"，退出码非 0，被误判成编码非法
+  if /usr/bin/python3 -c "import sys; open(sys.argv[1], encoding='utf-8').read()" "$f" 2>/dev/null; then
+    ok "UTF-8 编码合法"
+  else
+    err "不是合法 UTF-8"
+  fi
 
   a="${dest}/archive"
   if [ ! -e "${a}" ]; then
     err "缺少 archive/（agent 解析不到档案根目录）"
   else
     ap="${a}"; [ -L "${a}" ] && ap="$(readlink "${a}")"
-    if [ -f "${ap}/00-总索引.md" ]; then
+    if [ -f "${ap}/总索引.md" ] || [ -f "${ap}/00-总索引.md" ]; then
       ok "archive/ 就位；ArchiveRoot 解析 → ${ap}"
     else
-      err "archive/ 下没有 00-总索引.md（解析到的不是个人档案）"
+      err "archive/ 下没有 总索引.md 或 00-总索引.md（解析到的不是个人档案）"
     fi
   fi
 

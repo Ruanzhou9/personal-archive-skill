@@ -67,15 +67,20 @@ if [ ! -f "${SRC}/SKILL.md" ]; then
 fi
 
 # ---- --link-archive 参数校验（动手前拦住明显的错路径）----
+# 档案根目录的识别兼容新旧体例：总索引叫 总索引.md（现行）或 00-总索引.md（历史编号体例）
 if [ -n "${LINK_ARCHIVE}" ]; then
   case "${LINK_ARCHIVE}" in "~"*) LINK_ARCHIVE="${HOME}${LINK_ARCHIVE#\~}" ;; esac
   LINK_ARCHIVE="${LINK_ARCHIVE%/}"
   if [ ! -d "${LINK_ARCHIVE}" ]; then
     echo "✗ --link-archive 指向的目录不存在: ${LINK_ARCHIVE}"; exit 1
   fi
-  if [ ! -f "${LINK_ARCHIVE}/00-总索引.md" ]; then
-    echo "✗ ${LINK_ARCHIVE} 里没有 00-总索引.md —— 这看起来不是一个个人档案，拒绝链接。"
-    echo "  （正确的档案根目录应直接包含 00-总索引.md 与 10-画像/ 20-日志/ 30-规范/ 40-决策/）"
+  ARCH_IDX=""
+  for cand in "${LINK_ARCHIVE}/总索引.md" "${LINK_ARCHIVE}/00-总索引.md"; do
+    [ -f "${cand}" ] && ARCH_IDX="${cand}" && break
+  done
+  if [ -z "${ARCH_IDX}" ]; then
+    echo "✗ ${LINK_ARCHIVE} 里没有 总索引.md（或 00-总索引.md）—— 这看起来不是一个个人档案，拒绝链接。"
+    echo "  （正确的档案根目录应直接包含总索引与若干板块目录，如 画像/ 日志/ 规范/ 决策/）"
     exit 1
   fi
 fi
