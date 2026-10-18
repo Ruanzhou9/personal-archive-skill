@@ -59,7 +59,7 @@ for cand in "${ARCH}/总索引.md" "${ARCH}/00-总索引.md"; do
   [ -f "${cand}" ] && IDX="${cand}" && break
 done
 
-TYPE_ENUM="rule index profile log decision economics finance"
+TYPE_ENUM="rule index profile log weekly decision economics finance"
 STATUS_ENUM="生效中 已作废 草稿"
 ABS_RE='[/]Users[/][A-Za-z0-9_.-]+|[/]home[/][A-Za-z0-9_.-]+|[Cc]:[\\/]Users[\\/]'
 
